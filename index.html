@@ -1,5 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
+<style>
+    .equation {
+        font-family: "Times New Roman", Times, serif;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /* This is the line that centers the equation */
+        gap: 5px;
+        width: 100%;
+        /* Ensures the container spans the full width of the page */
+    }
+
+    .summation {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        margin: 0 5px;
+    }
+
+    .sum-symbol {
+        font-size: 2rem;
+        font-weight: normal;
+    }
+
+    .limits {
+        font-size: 0.7rem;
+    }
+
+    .variable-definitions {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 20px auto;
+        /* Centers the block itself */
+        background-color: #f9f9f9;
+        padding: 15px 25px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+    }
+
+    .variable-definitions h3 {
+        margin-top: 0;
+        font-size: 1.2rem;
+        color: #333;
+        border-bottom: 2px solid #ccc;
+        padding-bottom: 5px;
+    }
+
+    .variable-definitions ul {
+        list-style-type: none;
+        padding-left: 0;
+        line-height: 1.6;
+    }
+
+    .variable-definitions li {
+        margin-bottom: 10px;
+    }
+
+    .var-name {
+        font-family: "Times New Roman", Times, serif;
+        font-weight: bold;
+        font-size: 1.1rem;
+        margin-right: 5px;
+    }
+</style>
+</style>
 
 <head>
     <meta charset="utf-8">
@@ -333,8 +401,10 @@
                                 to store while still being able to reconstruct the original audio. This leads to a heavy
                                 imbalance to where encoding takes significantly longer to allow for near instantaneous
                                 decoding allowing us to skip to any point in a song and the audio immediately continuing
-                                to play. This page dives into how FLAC successfully compresses audio without losing
-                                audio data that of which is typical in audio compression. </p>
+                                to play. FLAC also allows us to dictate how compressed we want the audio to be, defined
+                                as the prediction order, at the tradeoff of encoding time. This page dives into how FLAC
+                                successfully compresses audio without losing audio data that of which is typical in
+                                audio compression. </p>
                         </div>
                     </div>
                 </div>
@@ -345,7 +415,7 @@
         <section class="section hero is-light">
             <div class="container is-max-desktop">
                 <div class="columns is-centered has-text-centered">
-                    <div class="column is-four-fifths">
+                    <div class="column">
                         <h2 class="title is-3">Important Terminology</h2>
                         <div class="content has-text-justified">
                             <!-- TODO: Replace with your paper abstract -->
@@ -362,8 +432,318 @@
                             <img src="static/images/lossy vs lossless.png"
                                 alt="A spectrogram showing the difference between lossy and lossless audio" />
                             <p>
-                                To visualize the idea of <strong>Lossless</strong> vs <strong>Lossy</strong> audio above is a spectogram of the song <i>Starless</i> by King Crimson.
-                                If you have never seen or analyzed a spectogram 
+                                To visualize the idea of <strong>Lossless</strong> vs <strong>Lossy</strong> audio above
+                                is a spectogram of the song <i>Starless</i> by King Crimson.
+                                If you have never seen or analyzed a spectogram, the X-axis is time, the Y-axis is
+                                frequency (Hz), and the color represents volume, with brighter colors being louder than
+                                darker colors. The top spectogram is a lossless FLAC file while the bottom is the common
+                                lossy MP3 file type. The first thing to notice is the cut off around 18,000 Hz that
+                                happens in the MP3 file where audio often doesnt surpass. This is one of the things the
+                                MP3 encoder does to cut down on required storage as the audio begins to reach the human
+                                hearing frequency limit (~20,000 Hz) it deems it as non-essential to the overall sound.
+                                The other thhing to look at is the change in volume where the MP3 lessens the volume of
+                                some frequencies as human can only typically focus on a smaller range of frequencies at
+                                a given time.
+                            </p>
+                            <ul>
+                                <li><strong>Linear Pulse Code Modulation (Linear PCM)</strong>: Uncompressed, digital
+                                    method for encoding audio signals by sampling the amplitude at uniform intervals
+                                </li>
+                                <li><strong>Sample Rate</strong>: Amount of audio samples (Linear PCM measurements) per
+                                    second</li>
+                                <li><strong>Bit Depth</strong>: Amount of bits used to represent an audio sample</li>
+                                <li><strong>Rice Coding</strong>: This is a form of <a
+                                        href="https://en.wikipedia.org/wiki/Golomb_coding" target="_blank"
+                                        style="color:rgb(62, 110, 243)">Golomb Coding</a> aiming at reducing the
+                                    amount of bits needed to represent numbers with the prior knowledge that the numbers
+                                    will typically be or near zero.</li>
+                                <li><strong>Nyquist-Shannon Theorem</strong>: A sound wave can be reconstructed as long
+                                    as the sampling rate is greater than twice the audible frequency
+                                    (<i>f<sub>s</sub></i> > 2<i>f<sub>max</sub></i>). Human hearing limit is roughly
+                                    20,000 Hz so the lowest sampling rate in audio recording is 44,100 Hz. </li>
+                            </ul>
+                            <div>
+                                <p>
+                                    To visualize the Nyquist-Shannon Theorem here are 3 graphs showing how it works on a
+                                    simple sine wave wth a frequency of 1 Hz:
+                                </p>
+                                <img src="static/images/nyquist-shannon-7hz.png">
+                                <p>
+                                    Above is an example using a sampling rate of 7 Hz, satisfying <i>f<sub>s</sub></i> >
+                                    2<i>f<sub>max</sub></i> . If given just the red dots you would be able to
+                                    reconstruct the blue sin wave to its original form.
+                                </p>
+                                <img src="static/images/nyquist-shannon-125hz.png">
+                                <p>
+                                    Above is an example with a sampling rate of 1.25 Hz, not
+                                    satisfying<i>f<sub>s</sub></i> >2<i>f<sub>max</sub></i> . If given only the red dots
+                                    you could not predict the original shape, let alone even predict that it was a sine
+                                    wave.
+                                </p>
+                                <img src="static/images/nyquist-shannon-1hz.png">
+                                <p>
+                                    Last is an example showing why the sampling rate can not be equal to
+                                    2<i>f<sub>max</sub></i> . When sampling at exactly twice the original frequency we
+                                    get a straight horizontal line of red dots making it impossible to reconstruct the
+                                    original sine wave.
+                                </p>
+
+                                <p>
+                                    You may be asking <strong>"How can we know it is this exact wave?"</strong> Which is
+                                    a valid question. To answer this we have to remember that human hearing limits cap
+                                    audible frequency at 20,000 Hz. To find another sound wave that hits all these
+                                    points we would have to increase the frequency of the line past a point of what
+                                    humans could even hear. Overall, this isnt really needed to understand how the FLAC
+                                    algorithm works but it helps some understand audio reconstruction/prediction.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="section hero is-light">
+            <div class="container is-max-desktop">
+                <div class="columns is-centered has-text-centered">
+                    <div class="column">
+                        <h2 class="title is-3">The FLAC Encoding Algorithm</h2>
+                        <div class="content has-text-justified">
+
+                            <p>
+                                The FLAC encoding algorithm can be broken down into 4 stages:
+                            <ol>
+                                <li><strong>Blocking</strong>: This is where the audio seperated into smaller chunks of
+                                    equal sample size, typically 4096 samples. This has a time complexity of
+                                    <i>O(N)</i>
+                                </li>
+                                <li><strong>Interchannel Decorrelation</strong>: Audio is typically stereo, meaning 2
+                                    audio channels typically a left and right channel. This stage aims exploit the
+                                    similarity between the 2 channels to reduce the amount of information we need to
+                                    store while remaining reconstructable. This has a time complexity of <i>O(N)</i>
+                                </li>
+                                <li>
+                                    <strong>Prediction</strong>: Since audio often repeats itself its also somewhat easy
+                                    to predict. If we can take a few of the first audio samples in a block and then
+                                    create some prediction coefficients we could reconstruct a predicted line that is
+                                    nearly the same as the original audio. This has a time complexity of <i>O(N
+                                        *P<sup>2</sup>)</i> where <i>P</i> is the prediction order we are using. However
+                                    P has a max value of 32 meaning<i> P<sup>2</sup></i> has a max value of 1024 which
+                                    is insignificant compared to the size of N, the time complexity can be reduced to
+                                    <i>O(N * P)</i>
+                                </li>
+                                <li>
+                                    <strong>Residual Encoding</strong>: The last stage of the algorithm. After the
+                                    prediction, we can take the difference between the actual and predicted to find the
+                                    residual value that we know will be near zero and reduce the amount of bits needed
+                                    to represent it even further. This has a time complexity of <i>O(N)</i>
+                                </li>
+                            </ol>
+                            The total time complexity for encoding equates to <i>O(N) + O(N) + O(N*P) + O(N) =
+                                O(N*P)</i>
+                            </p>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section hero is-light">
+            <div class="container is-max-desktop">
+                <div class="columns is-centered has-text-centered">
+                    <div class="column">
+                        <h2 class="title is-3">The Blocking Stage</h2>
+                        <div class="content has-text-justified">
+                            <p>Rememeber that all audio is represented via Pulse Code Modulation, meaning each sound can
+                                be represented as a number. There are typically with 44,100 per second (on the lower end
+                                but is considered CD level recording), resulting in millions of samples in a song. The
+                                first stage consists of breaking the audio channels up into blocks of equal number of
+                                samples.
+                                4096 samples is the typical block size as it allows for accurate prediction with shorter
+                                encoding times. The last block in the audio file does not have to be equal size so no
+                                padding is needed leading to less storage required. The block size used for audio data
+                                has a direct effect on the compression ratio. If the block size is too small, the
+                                resulting large number of frames means that a disproportionate number of bytes will be
+                                spent on frame headers. If the block size is too large, the characteristics of the
+                                signal may vary so much that the encoder will be unable to find a good predictor.</p>
+                            <img src="static/images/block.png">
+                            <p>
+                                Here is one block of <i>Fake Plastic Trees</i> by Radiohead. It is 4096 samples long
+                                with each sample representing the amplitude of the wave at that sample. In this image we
+                                can also see the repitition found in audio that allows us to predict it in later steps.
+                                For the basis of understanding the algorithm we can treat this essentially as our whole
+                                audio file as what happens to a block happens to all blocks and only requires them to be
+                                stitched back together once done with the residual encoding stage.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section hero is-light">
+            <div class="container is-max-desktop">
+                <div class="columns is-centered has-text-centered">
+                    <div class="column">
+                        <h2 class="title is-3">The Interchannel Decorrelation Stage</h2>
+                        <div class="content has-text-justified">
+                            <p>Channels are often correlated in audio files. FLAC can explot this correlation by
+                                encoding the average of the channels or the difference between 2 channels. There are 4
+                                possible methods for this</p>
+                            <ul>
+                                <li>
+                                    <strong>Independent</strong>: All channels are coded independent of one another.
+                                    This must be done when the file is not a stereo (2-channel) format.
+                                </li>
+                                <li>
+                                    <strong>Mid-Side</strong>: The left and right blocks are converted to what is coined
+                                    as a mid and side subframes. To calculate the mid subframe its just the average
+                                    between the 2 channels (or adding them and bit shifting to the right by 1 bit.) The
+                                    side subframe is simply calculated by subtracting the right channel from the left
+                                    channel. This allows the original audio channels to be recalculated while decreasing
+                                    the bits needed to represent them.
+                                </li>
+                                <li>
+                                    <strong>Left-Side</strong>: The left channel is encoded as is and a side channel is
+                                    calculated the same as it is in mid-side and is then encoded.
+                                </li>
+                                <li>
+                                    <strong>Side-Right</strong>: The Right channel is encoded as is and a side channel
+                                    is
+                                    calculated the same as it is in mid-side and is then encoded.
+                                </li>
+                            </ul>
+                            <img src="static/images/interchannel-decorrelation.png">
+                            <p>
+                                Here is the same block from <i>Fake Plastic Trees</i> that we used above showing the
+                                different values in the channel. Notice that the side channel is way smaller than the
+                                other channels leading to it being used in all but the independent option.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="section hero is-light">
+            <div class="container is-max-desktop">
+                <div class="columns is-centered has-text-centered">
+                    <div class="column">
+                        <h2 class="title is-3">The Prediction Stage</h2>
+                        <div class="content has-text-justified">
+                            <p> With the new channels calculated we can begin to calculate the values needed to predict
+                                them using Linear Predictive Coding (LPC). This uses Levinson-Durbin recursion to find
+                                the prediction order amount of prediction coefficients. There are 4 methods that FLAC
+                                uses in this stage to predict them</p>
+                            <ul>
+                                <li>
+                                    <strong>Verbatim</strong>: Samples are stored directly as no good model could find
+                                    accurate predictions.
+                                </li>
+                                <li>
+                                    <strong>Constant</strong>: A single value is stored. This isnt used often but can be
+                                    used in cases of pure digital silence.
+                                </li>
+                                <li>
+                                    <strong>Fixed Predictor</strong>: FLAC predicts each sample using 1 of the 5 fixed
+                                    predictors in the algorithm. This is used in simple waveforms and doesnt store any
+                                    prediction coefficients.
+                                </li>
+                                <li>
+                                    <strong>Linear Predictor</strong>: Samples are predicted using past samples and a
+                                    set
+                                    of predictor coefficients, and the error of this prediction is processed by the
+                                    residual coder. Compared to a fixed predictor, using a generic linear predictor adds
+                                    overhead as predictor coefficients need to be stored. Therefore, this method of
+                                    prediction is best suited for predicting more complex waveforms.
+                                </li>
+                            </ul>
+                            <img src="static/images/prediction.png">
+                            <p>
+                                Here is the predicted values for the same block we have been using. A set if "warmup"
+                                samples are kept meaning however many prediction coefficients we have, we keep an equal
+                                amount of the first samples as is. This allows us to only need to store the prediction
+                                coefficients and warmup samples to reconstruct the predicted wave with the difference
+                                between the actual and predicted being handled in a later stage. The next sample can be
+                                calculated by
+                            <div class="equation" style="text-align: center;">
+                                <span>x&#770;[n] =</span>
+                                <span class="summation" style="text-align: center;">
+                                    <span class="limits">p</span>
+                                    <span class="sum-symbol">&sum;</span>
+                                    <span class="limits">k=1</span>
+                                </span>
+                                <span>c<sub>k</sub> &middot; x[n-k]</span>
+                            </div>
+
+                            <div class="variable-definitions">
+                                <h3>Where:</h3>
+                                <ul>
+                                    <li><span class="var-name">x&#770;[n]</span> = The predicted value of the current
+                                        audio sample.</li>
+                                    <li><span class="var-name">p</span> = The predictor order (the number of past
+                                        samples used, typically between 1 and 32 in FLAC).</li>
+                                    <li><span class="var-name">c<sub>k</sub></span> = The prediction coefficient for the
+                                        past sample at step <em>k</em>.</li>
+                                    <li><span class="var-name">x[n-k]</span> = The actual, previously decoded past audio
+                                        sample.</li>
+                                    <li><span class="var-name">n</span> = The index of the current sample being
+                                        predicted.</li>
+                                    <li><span class="var-name">k</span> = The summation index, representing how many
+                                        steps back we are looking.</li>
+                                </ul>
+                            </div>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section hero is-light">
+            <div class="container is-max-desktop">
+                <div class="columns is-centered has-text-centered">
+                    <div class="column">
+                        <h2 class="title is-3">Residual Encoding</h2>
+                        <div class="content has-text-justified">
+                            <p>Predictors are only predicting audio so they will have some error. The error though will
+                                be small so we can use rice coding to shorten the amount of bits needed. Since we can
+                                reconstruct all of the predictions just from the warmup samples and prediction
+                                coefficients this is the only thing we have to store from the sample. For an example of
+                                how rice coding works, one can be found <a
+                                    href="https://michaeldipperstein.github.io/rice.html" target="_blank"
+                                    style="color:rgb(62, 110, 243)">here</a></p>
+                            <img src="static/images/whole-block-resid.png">
+                            <img src="static/images/subblock-resid.png">
+
+                            <p>
+                                Notice that the resiudal is near zero for most of the block. This is where rice coding
+                                excels in decreasing the amount storage needed.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section hero is-light">
+            <div class="container is-max-desktop">
+                <div class="columns is-centered has-text-centered">
+                    <div class="column">
+                        <h2 class="title is-3">FLAC Performance Findings</h2>
+                        <div class="content has-text-justified">
+                            <p>
+                                To see how the different compression levels effect the encoding speed as well as
+                                compression ratio, I tested my actual music library of roughly 2000 songs at each
+                                compression level and measured their speed and compression ratio.
+                            </p>
+                            <img src="static/images/flac-performance.png">
+
+                            <p>
+                                By default the algorithm has a compression level of 5. The level 2 compression performs
+                                poorly due to it using a block size of 2048 leading to more predictions needing to be
+                                made. As you can see after level 4, the benefits begin to diminish as the compression
+                                level increases, not even gaining a whole percent in compression ratio yet at only
+                                65% of the encoding speed.
                             </p>
                         </div>
                     </div>
